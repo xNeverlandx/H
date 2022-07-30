@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+    <script>
+         window.onload = () => {
+            try {
+                fetch('http://localhost:8080/getTypes').then(response => {
+                        response.json().then(res => {
+                            let list = document.getElementById('list');
+                            res.forEach((item) => {
+                                let option = document.createElement("option");
+                                option.innerText = item.name;
+                                option.value = item.id;
+                                list.appendChild(option);
+
+                                item.listOfSubTypes.forEach((subtype) => {
+                                    let option = document.createElement("option");
+                                    option.innerText = "\u00A0\u00A0\u00A0" + subtype.name;
+                                    option.value = subtype.id;
+                                    list.appendChild(option);
+
+                                    subtype.subTypesOfSubTypesDtos.forEach((subOfSub) => {
+                                        let option = document.createElement("option");
+                                        option.innerText = "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0" + subOfSub.name;
+                                        option.value = subOfSub.id;
+                                        list.appendChild(option);
+
+                                        subOfSub.subSubSubTypesDtos.forEach((subSubSub) => {
+                                            let option = document.createElement("option");
+                                            option.innerText = "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0" + subSubSub.name;
+                                            option.value = subSubSub.id;
+                                            list.appendChild(option);
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    }
+                );
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    </script>
+
+    <script>
+        async function addValue() {
+            let userName = document.getElementById("name").value;
+            let agreeToTerms = document.getElementById("terms").checked;
+            let selected = document.querySelectorAll('#list option:checked');
+            let values = Array.from(selected).map(el => el.value);
+            let userId = document.getElementById("userId").value;
+            console.log("Data:userId ", userId);
+
+                if (!userId) {
+                    try {
+                        await fetch('http://localhost:8080/createUser', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                name: userName,
+                                agreeToTerms: agreeToTerms,
+                                typesIds: values
+                            }),
+                        }).then(res => {
+                            console.log(res);
+                            res.json().then(r => {
+                                alert("User successfully added! User ID: " + r.id);
+                            })
+                        })
+                    } catch (e) {
+                        console.log(e);
+                        alert("Error occurred, try again later!")
+                    }
+                } else {
+                    try {
+                        await fetch('http://localhost:8080/updateUser', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                id: userId,
+                                name: userName,
+                                agreeToTerms: agreeToTerms,
+                                typesIds: values
+                            }),
+                        }).then(res => {
+                            console.log(res);
+                            if (res.ok) {
+                                alert("User successfully updated!");
+                            } else {
+                                alert("User do not exist!")
+                            }
+                        })
+                    } catch (e) {
+                        console.log(e);
+                    }
+                }
+        }
+    </script>
+
+    <script>
+        async function loadUserData() {
+            let userId = document.getElementById("userId").value;
+            fetch('http://localhost:8080/getUserById?' + new URLSearchParams({
+                userId: userId
+            }).toString(), {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+            }).then((response) => {
+                response.json().then(res => {
+                    console.log("Data: ", res);
+                    document.getElementById("name").value = res.name;
+                    document.getElementById("terms").checked = res.agreeToTerms;
+                    let arrayIds = [];
+                    res.typesIds.forEach(n => {
+                        arrayIds.push(n.toString());
+                    })
+                    let element = document.getElementById("list");
+                    for (let i = 0; i < element.options.length; i++) {
+                        element.options[i].selected = arrayIds.indexOf(element.options[i].value) >= 0;
+                    }
+                })
+                alert("User data uploaded successfully");
+            }).catch(e => {
+                alert("an error occurred, please try again later");
+                console.log(e);
+            });
+        }
+    </script>
+
+</head>
+<body>
+<form onsubmit="addValue();return false">
+    Enter userID and press button load to get user data.
+    <input type="text" id="userId">
+    <input type="button" value="Load" onclick="loadUserData()">
+    <br>
+    <br>
+    Please enter your name and pick the Sectors you are currently involved in.
+    <br>
+    <br>
+    Name:
+    <input required type="text" id="name"><br>
+    <br>
+    Sectors:
+    <select required id="list" multiple="multiple" size="5">
+
+    </select>
+
+    <br>
+    <br>
+    <input required type="checkbox" id="terms">
+    Agree to terms
+    <br>
+    <br>
+    To update the data, you need to fill userID!
+    <br>
+    <input type="submit" value="Save">
+</form>
+</body>
+</html>
